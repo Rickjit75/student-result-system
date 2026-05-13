@@ -2,7 +2,7 @@
 
 A full-stack web application designed for educational administrators to manage student records, track academic performance, and visualize classroom data in real-time.
 
-## 🚀 Key Features
+##  Key Features
 *   **Full CRUD Operations**: Create, Read, Update, and Delete student records seamlessly.
 *   **Dynamic Subject Tracking**: Add custom subjects for each student with individual mark entry.
 *   **Automated Analytics**: Real-time calculation of averages and letter grades (A+, A, B, etc.).
@@ -10,13 +10,13 @@ A full-stack web application designed for educational administrators to manage s
 *   **Modern UI/UX**: Includes a custom Dark Mode toggle with persistent memory and color-coded grading.
 *   **Responsive Design**: Optimized for both desktop and mobile viewing with a metallic gradient aesthetic.
 
-## 🛠️ Tech Stack
+##  Tech Stack
 *   **Backend**: Java 21, Spring Boot 3.x, Spring Data JPA.
 *   **Database**: MySQL.
 *   **Frontend**: HTML5, CSS3, Modern JavaScript (ES6+).
 *   **Tools**: Git, Maven, IntelliJ IDEA, Postman.
 
-## 🏗️ System Architecture
+##  System Architecture
 The application follows a standard N-tier architecture:
 1.  **Controller Layer**: Handles REST API endpoints.
 2.  **Service Layer**: Manages business logic and grade calculations.
