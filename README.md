@@ -27,6 +27,3 @@ The application follows a standard N-tier architecture:
 1. **Clone the Repo**:
    ```bash
    git clone [https://github.com/Rickjit75/student-result-system.git](https://github.com/Rickjit75/student-result-system.git)
-1. **Clone the Repo**:
-   ```bash
-   git clone [https://github.com/Rickjit75/student-result-system.git](https://github.com/Rickjit75/student-result-system.git)
