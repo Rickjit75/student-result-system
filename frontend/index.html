@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Student Result System</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="top-bar">
+  <div style="flex: 1;"></div>
+  <h1>Student Result Management System</h1>
+  <div style="flex: 1; display: flex; justify-content: flex-end;">
+    <button class="toggle-btn small" onclick="toggleDarkMode()">🌙</button>
+  </div>
+</div>
+
+<div id="editModal" class="modal">
+  <div class="form-box">
+    <h2>Edit Student</h2>
+    <input id="editId" type="hidden">
+    <input id="editName" placeholder="Name">
+    <input id="editEmail" placeholder="Email">
+    <input id="editMath" placeholder="Math Marks" type="number">
+    <input id="editScience" placeholder="Science Marks" type="number">
+    <input id="editEnglish" placeholder="English Marks" type="number">
+    <div id="editExtraSubjectsContainer"></div>
+    <button class="add-subject-btn" onclick="addEditSubjectField()">+ Add Subject</button>
+    <div style="display: flex; gap: 10px; margin-top: 10px;">
+      <button onclick="updateStudent()">Save Changes</button>
+      <button onclick="closeEditModal()" style="background: #7f8c8d;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="subjectModal" class="modal">
+  <div class="form-box">
+    <h2>Add Extra Subject</h2>
+    <input id="subjectName" placeholder="Subject Name (e.g. Physics)">
+    <input id="subjectMarks" placeholder="Marks" type="number">
+    <div style="display: flex; gap: 10px;">
+      <button onclick="confirmAddSubject()">Add</button>
+      <button onclick="closeSubjectModal()" style="background:#7f8c8d;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="dashboard">
+  <div class="stat-card">
+    <div class="stat-number" id="totalStudents">0</div>
+    <div class="stat-label">Total Students</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number" id="classAverage">0</div>
+    <div class="stat-label">Class Average</div>
+  </div>
+  <div class="stat-card passed">
+    <div class="stat-number" id="passCount">0</div>
+    <div class="stat-label">Passed</div>
+  </div>
+  <div class="stat-card failed">
+    <div class="stat-number" id="failCount">0</div>
+    <div class="stat-label">Failed</div>
+  </div>
+</div>
+
+<div class="form-box">
+  <h2>Add Student</h2>
+  <input id="name" placeholder="Name">
+  <input id="email" placeholder="Email">
+  <input id="math" placeholder="Math Marks" type="number">
+  <input id="science" placeholder="Science Marks" type="number">
+  <input id="english" placeholder="English Marks" type="number">
+  <div id="extraSubjectsContainer"></div>
+  <button class="add-subject-btn" onclick="addSubjectField()">+ Add Subject</button>
+  <button onclick="addStudent()">Add Student</button>
+</div>
+
+<h2>All Students</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Math</th>
+      <th>Science</th>
+      <th>English</th>
+      <th>Average</th>
+      <th>Grade</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody id="tableBody"></tbody>
+</table>
+
+<script src="app.js"></script>
+</body>
+</html>
