@@ -1,7 +1,6 @@
 let editingSubjects = [];
 let pendingSubjects = [];
-const API = "http://localhost:8080/api/students";
-
+const API = "https://student-result-system-production-0eef.up.railway.app/api/students";
 async function loadStudents() {
   const res = await fetch(API);
   const students = await res.json();
