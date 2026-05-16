@@ -7,91 +7,168 @@
 </head>
 <body>
 
-<div class="top-bar">
-  <div style="flex: 1;"></div>
-  <h1>Student Result Management System</h1>
-  <div style="flex: 1; display: flex; justify-content: flex-end;">
-    <button class="toggle-btn small" onclick="toggleDarkMode()">🌙</button>
-  </div>
-</div>
+<!-- ===== AUTH SCREEN ===== -->
+<div id="auth-screen" style="display:none;">
+  <div class="auth-card">
+    <div class="auth-logo">
+      📊
+      <div>Student Result System</div>
+      <small>Teacher Portal</small>
+    </div>
 
-<div id="editModal" class="modal">
-  <div class="form-box">
-    <h2>Edit Student</h2>
-    <input id="editId" type="hidden">
-    <input id="editName" placeholder="Name">
-    <input id="editEmail" placeholder="Email">
-    <input id="editMath" placeholder="Math Marks" type="number">
-    <input id="editScience" placeholder="Science Marks" type="number">
-    <input id="editEnglish" placeholder="English Marks" type="number">
-    <div id="editExtraSubjectsContainer"></div>
-    <button class="add-subject-btn" onclick="addEditSubjectField()">+ Add Subject</button>
-    <div style="display: flex; gap: 10px; margin-top: 10px;">
-      <button onclick="updateStudent()">Save Changes</button>
-      <button onclick="closeEditModal()" style="background: #7f8c8d;">Cancel</button>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Login</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')">Register</button>
+    </div>
+
+    <div id="auth-error" class="auth-error"></div>
+
+    <!-- Login Form -->
+    <div id="login-form">
+      <input id="login-email" placeholder="Email" type="email">
+      <input id="login-pass" placeholder="Password" type="password"
+        onkeydown="if(event.key==='Enter') doLogin()">
+      <button onclick="doLogin()">Login →</button>
+    </div>
+
+    <!-- Register Form -->
+    <div id="register-form" style="display:none;">
+      <input id="reg-name" placeholder="Full Name">
+      <input id="reg-email" placeholder="Email" type="email">
+      <input id="reg-pass" placeholder="Password (min 6 characters)" type="password">
+      <input id="reg-school" placeholder="School Name">
+      <button onclick="doRegister()">Create Account →</button>
     </div>
   </div>
 </div>
 
-<div id="subjectModal" class="modal">
-  <div class="form-box">
-    <h2>Add Extra Subject</h2>
-    <input id="subjectName" placeholder="Subject Name (e.g. Physics)">
-    <input id="subjectMarks" placeholder="Marks" type="number">
-    <div style="display: flex; gap: 10px;">
-      <button onclick="confirmAddSubject()">Add</button>
-      <button onclick="closeSubjectModal()" style="background:#7f8c8d;">Cancel</button>
+<!-- ===== MAIN APP ===== -->
+<div id="main-app" style="display:none;">
+
+  <div class="top-bar">
+    <div style="flex:1;"></div>
+    <h1>Student Result Management System</h1>
+    <div style="flex:1; display:flex; justify-content:flex-end; align-items:center; gap:8px;">
+      <span id="topbar-teacher-name"></span>
+      <button class="toggle-btn small" onclick="doLogout()" style="background:#e74c3c;">Logout</button>
+      <button class="toggle-btn small" onclick="toggleDarkMode()">🌙</button>
     </div>
   </div>
-</div>
 
-<div class="dashboard">
-  <div class="stat-card">
-    <div class="stat-number" id="totalStudents">0</div>
-    <div class="stat-label">Total Students</div>
+  <!-- Nav Tabs -->
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showSection('dashboard-students')">📋 Students</button>
+    <button class="nav-tab" onclick="showSection('classes-section')">🏫 Classes &amp; Sections</button>
   </div>
-  <div class="stat-card">
-    <div class="stat-number" id="classAverage">0</div>
-    <div class="stat-label">Class Average</div>
-  </div>
-  <div class="stat-card passed">
-    <div class="stat-number" id="passCount">0</div>
-    <div class="stat-label">Passed</div>
-  </div>
-  <div class="stat-card failed">
-    <div class="stat-number" id="failCount">0</div>
-    <div class="stat-label">Failed</div>
-  </div>
-</div>
 
-<div class="form-box">
-  <h2>Add Student</h2>
-  <input id="name" placeholder="Name">
-  <input id="email" placeholder="Email">
-  <input id="math" placeholder="Math Marks" type="number">
-  <input id="science" placeholder="Science Marks" type="number">
-  <input id="english" placeholder="English Marks" type="number">
-  <div id="extraSubjectsContainer"></div>
-  <button class="add-subject-btn" onclick="addSubjectField()">+ Add Subject</button>
-  <button onclick="addStudent()">Add Student</button>
-</div>
+  <!-- ===== STUDENTS SECTION ===== -->
+  <div id="dashboard-students">
 
-<h2>All Students</h2>
-<table>
-  <thead>
-    <tr>
-      <th>Name</th>
-      <th>Email</th>
-      <th>Math</th>
-      <th>Science</th>
-      <th>English</th>
-      <th>Average</th>
-      <th>Grade</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody id="tableBody"></tbody>
-</table>
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+      <div class="form-box">
+        <h2>Edit Student</h2>
+        <input id="editId" type="hidden">
+        <input id="editName" placeholder="Name">
+        <input id="editEmail" placeholder="Email">
+        <input id="editMath" placeholder="Math Marks" type="number">
+        <input id="editScience" placeholder="Science Marks" type="number">
+        <input id="editEnglish" placeholder="English Marks" type="number">
+        <div id="editExtraSubjectsContainer"></div>
+        <button class="add-subject-btn" onclick="addEditSubjectField()">+ Add Subject</button>
+        <div style="display:flex; gap:10px; margin-top:10px;">
+          <button onclick="updateStudent()">Save Changes</button>
+          <button onclick="closeEditModal()" style="background:#7f8c8d;">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subject Modal -->
+    <div id="subjectModal" class="modal">
+      <div class="form-box">
+        <h2>Add Extra Subject</h2>
+        <input id="subjectName" placeholder="Subject Name (e.g. Physics)">
+        <input id="subjectMarks" placeholder="Marks" type="number">
+        <div style="display:flex; gap:10px;">
+          <button onclick="confirmAddSubject()">Add</button>
+          <button onclick="closeSubjectModal()" style="background:#7f8c8d;">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard Stats -->
+    <div class="dashboard">
+      <div class="stat-card">
+        <div class="stat-number" id="totalStudents">0</div>
+        <div class="stat-label">Total Students</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="classAverage">0</div>
+        <div class="stat-label">Class Average</div>
+      </div>
+      <div class="stat-card passed">
+        <div class="stat-number" id="passCount">0</div>
+        <div class="stat-label">Passed</div>
+      </div>
+      <div class="stat-card failed">
+        <div class="stat-number" id="failCount">0</div>
+        <div class="stat-label">Failed</div>
+      </div>
+    </div>
+
+    <!-- Add Student Form -->
+    <div class="form-box">
+      <h2>Add Student</h2>
+
+      <div id="dup-warning" class="dup-warning" style="display:none;">
+        ⚠️ A student with this email already exists!
+      </div>
+
+      <input id="name" placeholder="Name">
+      <input id="email" placeholder="Email" type="email" oninput="checkDuplicateEmail()">
+      <input id="math" placeholder="Math Marks" type="number">
+      <input id="science" placeholder="Science Marks" type="number">
+      <input id="english" placeholder="English Marks" type="number">
+      <div id="extraSubjectsContainer"></div>
+      <button class="add-subject-btn" onclick="addSubjectField()">+ Add Subject</button>
+      <button onclick="addStudent()">Add Student</button>
+    </div>
+
+    <!-- All Students Table -->
+    <h2>All Students</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Math</th>
+          <th>Science</th>
+          <th>English</th>
+          <th>Average</th>
+          <th>Grade</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+
+  </div><!-- end #dashboard-students -->
+
+  <!-- ===== CLASSES & SECTIONS ===== -->
+  <div id="classes-section" style="display:none;">
+
+    <div class="form-box">
+      <h2>Add New Class</h2>
+      <input id="new-class-name" placeholder="Class name (e.g. Class 10, Grade 5)">
+      <button onclick="addClassAPI()">+ Add Class</button>
+    </div>
+
+    <h2>Existing Classes</h2>
+    <div id="class-list"></div>
+
+  </div><!-- end #classes-section -->
+
+</div><!-- end #main-app -->
 
 <script src="app.js"></script>
 </body>
