@@ -1,10 +1,12 @@
 package student_result_system.repository;
 
-import student_result_system.model.Student;
+import student_result_system.model.Teacher;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import java.util.Optional;
 
 @Repository
-public interface StudentRepository extends JpaRepository<Student, Long> {
+public interface TeacherRepository extends JpaRepository<Teacher, Long> {
+    Optional<Teacher> findByEmail(String email);
     boolean existsByEmail(String email);
 }

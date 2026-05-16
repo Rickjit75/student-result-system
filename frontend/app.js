@@ -1,14 +1,145 @@
+// ===== API ENDPOINTS =====
+const API       = "https://student-result-system-production-0eef.up.railway.app/api/students";
+const AUTH_API  = "https://student-result-system-production-0eef.up.railway.app/api/auth";
+const CLASS_API = "https://student-result-system-production-0eef.up.railway.app/api/classes";
+
+// ===== STATE =====
 let editingSubjects = [];
 let pendingSubjects = [];
-const API = "https://student-result-system-production-0eef.up.railway.app/api/students";
+
+// =====================================================
+// AUTH
+// =====================================================
+
+function switchAuthTab(tab) {
+  document.getElementById('login-form').style.display    = tab === 'login'    ? 'block' : 'none';
+  document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
+  document.querySelectorAll('.auth-tab').forEach((btn, i) => {
+    btn.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'register'));
+  });
+  document.getElementById('auth-error').textContent = '';
+}
+
+async function doLogin() {
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-pass').value;
+
+  if (!email || !password) {
+    document.getElementById('auth-error').textContent = 'Please fill in all fields.';
+    return;
+  }
+
+  try {
+    const res  = await fetch(`${AUTH_API}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      localStorage.setItem('teacher', JSON.stringify(data.teacher));
+      enterApp(data.teacher);
+    } else {
+      document.getElementById('auth-error').textContent = data.message;
+    }
+  } catch (e) {
+    document.getElementById('auth-error').textContent = 'Could not connect to server. Please try again.';
+  }
+}
+
+async function doRegister() {
+  const name     = document.getElementById('reg-name').value.trim();
+  const email    = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-pass').value;
+  const school   = document.getElementById('reg-school').value.trim();
+
+  if (!name || !email || !password || !school) {
+    document.getElementById('auth-error').textContent = 'Please fill in all fields.';
+    return;
+  }
+  if (password.length < 6) {
+    document.getElementById('auth-error').textContent = 'Password must be at least 6 characters.';
+    return;
+  }
+
+  try {
+    const res  = await fetch(`${AUTH_API}/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password, school })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      localStorage.setItem('teacher', JSON.stringify(data.teacher));
+      enterApp(data.teacher);
+    } else {
+      document.getElementById('auth-error').textContent = data.message;
+    }
+  } catch (e) {
+    document.getElementById('auth-error').textContent = 'Could not connect to server. Please try again.';
+  }
+}
+
+function enterApp(teacher) {
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('main-app').style.display    = 'block';
+  document.getElementById('topbar-teacher-name').textContent = '👤 ' + teacher.name;
+
+  // Apply saved dark mode
+  if (localStorage.getItem('darkMode') === 'enabled') {
+    document.body.classList.add('dark');
+    const btn = document.querySelector('.toggle-btn');
+    if (btn) btn.textContent = '☀️';
+  }
+
+  loadStudents();
+}
+
+function doLogout() {
+  localStorage.removeItem('teacher');
+  document.getElementById('main-app').style.display    = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+  // Reset auth form
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value  = '';
+  document.getElementById('auth-error').textContent = '';
+  switchAuthTab('login');
+}
+
+// =====================================================
+// NAV TABS
+// =====================================================
+
+function showSection(id) {
+  document.getElementById('dashboard-students').style.display =
+    id === 'dashboard-students' ? 'block' : 'none';
+  document.getElementById('classes-section').style.display =
+    id === 'classes-section' ? 'block' : 'none';
+
+  document.querySelectorAll('.nav-tab').forEach((btn, i) => {
+    btn.classList.toggle('active',
+      (i === 0 && id === 'dashboard-students') ||
+      (i === 1 && id === 'classes-section')
+    );
+  });
+
+  if (id === 'classes-section') loadClasses();
+}
+
+// =====================================================
+// STUDENTS — load & render
+// =====================================================
+
 async function loadStudents() {
-  const res = await fetch(API);
+  const res      = await fetch(API);
   const students = await res.json();
-  const tbody = document.getElementById("tableBody");
-  const thead = document.querySelector("thead tr");
+  const tbody    = document.getElementById("tableBody");
+  const thead    = document.querySelector("thead tr");
   tbody.innerHTML = "";
 
-  // Collect all unique extra subject names across all students
+  // Collect all unique extra subject names
   const allExtraSubjects = new Set();
   students.forEach(s => {
     if (s.extraSubjects) {
@@ -30,32 +161,34 @@ async function loadStudents() {
     <th>Actions</th>
   `;
 
-  // Dashboard stats
   let totalAvg = 0;
   let passCount = 0;
   let failCount = 0;
 
   students.forEach(s => {
-    // Calculate average including extra subjects
     let total = s.mathMarks + s.scienceMarks + s.englishMarks;
     let count = 3;
     if (s.extraSubjects) {
-      s.extraSubjects.forEach(sub => {
-        total += sub.marks;
-        count++;
-      });
+      s.extraSubjects.forEach(sub => { total += sub.marks; count++; });
     }
-    const avg = (total / count).toFixed(1);
-    const gradeClass = parseFloat(avg) >= 90 ? 'a-plus' : parseFloat(avg) >= 75 ? 'a' : parseFloat(avg) >= 60 ? 'b' : parseFloat(avg) >= 45 ? 'c' : 'f';
-    const grade = parseFloat(avg) >= 90 ? "A+" : parseFloat(avg) >= 75 ? "A" : parseFloat(avg) >= 60 ? "B" : parseFloat(avg) >= 45 ? "C" : "F";
+    const avg        = (total / count).toFixed(1);
+    const gradeClass = parseFloat(avg) >= 90 ? 'a-plus'
+                     : parseFloat(avg) >= 75 ? 'a'
+                     : parseFloat(avg) >= 60 ? 'b'
+                     : parseFloat(avg) >= 45 ? 'c' : 'f';
+    const grade      = parseFloat(avg) >= 90 ? "A+"
+                     : parseFloat(avg) >= 75 ? "A"
+                     : parseFloat(avg) >= 60 ? "B"
+                     : parseFloat(avg) >= 45 ? "C" : "F";
 
     totalAvg += parseFloat(avg);
     if (parseFloat(avg) >= 45) passCount++;
     else failCount++;
 
-    // Build extra subject cells — show marks if student has that subject, else "-"
     const extraCells = extraSubjectList.map(name => {
-      const found = s.extraSubjects ? s.extraSubjects.find(sub => sub.subjectName === name) : null;
+      const found = s.extraSubjects
+        ? s.extraSubjects.find(sub => sub.subjectName === name)
+        : null;
       return `<td>${found ? found.marks : "<span style='color:#aaa;'>-</span>"}</td>`;
     }).join("");
 
@@ -76,17 +209,21 @@ async function loadStudents() {
       </tr>`;
   });
 
-  // Update dashboard
-  document.getElementById("totalStudents").textContent = students.length;
-  document.getElementById("classAverage").textContent = students.length > 0 ? (totalAvg / students.length).toFixed(1) : 0;
+  document.getElementById("totalStudents").textContent  = students.length;
+  document.getElementById("classAverage").textContent   =
+    students.length > 0 ? (totalAvg / students.length).toFixed(1) : 0;
   document.getElementById("passCount").textContent = passCount;
   document.getElementById("failCount").textContent = failCount;
 }
 
+// =====================================================
+// STUDENTS — add
+// =====================================================
+
 async function addStudent() {
-  const name = document.getElementById("name").value;
-  const email = document.getElementById("email").value;
-  const mathMarks = parseInt(document.getElementById("math").value);
+  const name         = document.getElementById("name").value;
+  const email        = document.getElementById("email").value;
+  const mathMarks    = parseInt(document.getElementById("math").value);
   const scienceMarks = parseInt(document.getElementById("science").value);
   const englishMarks = parseInt(document.getElementById("english").value);
 
@@ -95,11 +232,17 @@ async function addStudent() {
     return;
   }
 
- const student = { 
-    name, 
-    email, 
-    mathMarks, 
-    scienceMarks, 
+  // Block submission if duplicate is flagged
+  if (document.getElementById('dup-warning').style.display === 'block') {
+    alert("Please use a different email — this one is already registered.");
+    return;
+  }
+
+  const student = {
+    name,
+    email,
+    mathMarks,
+    scienceMarks,
     englishMarks,
     extraSubjects: pendingSubjects.map(s => ({
       subjectName: s.subjectName,
@@ -107,45 +250,74 @@ async function addStudent() {
     }))
   };
 
-  await fetch(API, {
+  const res = await fetch(API, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(student)
   });
 
-  // Reset
+  if (res.status === 409) {
+    document.getElementById('dup-warning').style.display = 'block';
+    return;
+  }
+
+  // Reset form
   pendingSubjects = [];
   document.getElementById("extraSubjectsContainer").innerHTML = "";
-
-  // Clear inputs
-  document.getElementById("name").value = "";
-  document.getElementById("email").value = "";
-  document.getElementById("math").value = "";
+  document.getElementById("name").value    = "";
+  document.getElementById("email").value   = "";
+  document.getElementById("math").value    = "";
   document.getElementById("science").value = "";
   document.getElementById("english").value = "";
+  document.getElementById("dup-warning").style.display = 'none';
 
   loadStudents();
 }
 
-// --- NEW EDIT FUNCTIONS ---
+// =====================================================
+// DUPLICATE EMAIL CHECK
+// =====================================================
 
+let dupCheckTimeout = null;
 
+async function checkDuplicateEmail() {
+  const email   = document.getElementById('email').value.trim();
+  const warning = document.getElementById('dup-warning');
+
+  if (!email) {
+    warning.style.display = 'none';
+    return;
+  }
+
+  // Debounce — wait 400ms after user stops typing
+  clearTimeout(dupCheckTimeout);
+  dupCheckTimeout = setTimeout(async () => {
+    try {
+      const res  = await fetch(`${API}/check-email?email=${encodeURIComponent(email)}`);
+      const data = await res.json();
+      warning.style.display = data.exists ? 'block' : 'none';
+    } catch (e) {
+      warning.style.display = 'none';
+    }
+  }, 400);
+}
+
+// =====================================================
+// STUDENTS — edit modal
+// =====================================================
 
 function openEditModal(student) {
   document.getElementById("editModal").style.display = "flex";
-  document.getElementById("editId").value = student.id;
-  document.getElementById("editName").value = student.name;
-  document.getElementById("editEmail").value = student.email;
-  document.getElementById("editMath").value = student.mathMarks;
+  document.getElementById("editId").value      = student.id;
+  document.getElementById("editName").value    = student.name;
+  document.getElementById("editEmail").value   = student.email;
+  document.getElementById("editMath").value    = student.mathMarks;
   document.getElementById("editScience").value = student.scienceMarks;
   document.getElementById("editEnglish").value = student.englishMarks;
 
-  // Load existing extra subjects
-  editingSubjects = student.extraSubjects ? student.extraSubjects.map(s => ({
-    id: s.id,
-    subjectName: s.subjectName,
-    marks: s.marks
-  })) : [];
+  editingSubjects = student.extraSubjects
+    ? student.extraSubjects.map(s => ({ id: s.id, subjectName: s.subjectName, marks: s.marks }))
+    : [];
   renderEditSubjects();
 }
 
@@ -165,12 +337,9 @@ function renderEditSubjects() {
 
 function addEditSubjectField() {
   document.getElementById("subjectModal").style.display = "flex";
-  document.getElementById("subjectName").value = "";
+  document.getElementById("subjectName").value  = "";
   document.getElementById("subjectMarks").value = "";
-
-  // Override confirm button temporarily for edit modal
-  document.getElementById("subjectModal")
-    .setAttribute("data-mode", "edit");
+  document.getElementById("subjectModal").setAttribute("data-mode", "edit");
 }
 
 function removeEditSubject(index) {
@@ -183,17 +352,17 @@ function closeEditModal() {
 }
 
 async function updateStudent() {
-  const id = document.getElementById("editId").value;
+  const id      = document.getElementById("editId").value;
   const student = {
-    name: document.getElementById("editName").value,
-    email: document.getElementById("editEmail").value,
-    mathMarks: parseInt(document.getElementById("editMath").value),
-    scienceMarks: parseInt(document.getElementById("editScience").value),
-    englishMarks: parseInt(document.getElementById("editEnglish").value),
+    name:          document.getElementById("editName").value,
+    email:         document.getElementById("editEmail").value,
+    mathMarks:     parseInt(document.getElementById("editMath").value),
+    scienceMarks:  parseInt(document.getElementById("editScience").value),
+    englishMarks:  parseInt(document.getElementById("editEnglish").value),
     extraSubjects: editingSubjects.map(s => ({
-      id: s.id || null,
+      id:          s.id || null,
       subjectName: s.subjectName,
-      marks: s.marks
+      marks:       s.marks
     }))
   };
 
@@ -207,7 +376,9 @@ async function updateStudent() {
   loadStudents();
 }
 
-// --- END EDIT FUNCTIONS ---
+// =====================================================
+// STUDENTS — delete
+// =====================================================
 
 async function deleteStudent(id) {
   if (confirm("Are you sure you want to delete this student?")) {
@@ -216,31 +387,15 @@ async function deleteStudent(id) {
   }
 }
 
-function toggleDarkMode() {
-  document.body.classList.toggle("dark");
-  const btn = document.querySelector(".toggle-btn");
-  if (document.body.classList.contains("dark")) {
-    btn.textContent = "☀️"; // Small icon only
-    localStorage.setItem("darkMode", "enabled");
-  } else {
-    btn.textContent = "🌙"; // Small icon only
-    localStorage.setItem("darkMode", "disabled");
-  }
-}
-
-// Remember user's preference
-if (localStorage.getItem("darkMode") === "enabled") {
-  document.body.classList.add("dark");
-  const btn = document.querySelector(".toggle-btn");
-  if(btn) btn.textContent = "☀️";
-}
-// Extra subjects for new student form
-
+// =====================================================
+// EXTRA SUBJECTS (add form)
+// =====================================================
 
 function addSubjectField() {
   document.getElementById("subjectModal").style.display = "flex";
-  document.getElementById("subjectName").value = "";
+  document.getElementById("subjectName").value  = "";
   document.getElementById("subjectMarks").value = "";
+  document.getElementById("subjectModal").removeAttribute("data-mode");
 }
 
 function closeSubjectModal() {
@@ -248,7 +403,7 @@ function closeSubjectModal() {
 }
 
 function confirmAddSubject() {
-  const name = document.getElementById("subjectName").value.trim();
+  const name  = document.getElementById("subjectName").value.trim();
   const marks = parseInt(document.getElementById("subjectMarks").value);
   if (!name || isNaN(marks)) {
     alert("Please enter subject name and marks!");
@@ -258,10 +413,10 @@ function confirmAddSubject() {
   const mode = document.getElementById("subjectModal").getAttribute("data-mode");
 
   if (mode === "edit") {
-    editingSubjects.push({ subjectName: name, marks: marks });
+    editingSubjects.push({ subjectName: name, marks });
     renderEditSubjects();
   } else {
-    pendingSubjects.push({ subjectName: name, marks: marks });
+    pendingSubjects.push({ subjectName: name, marks });
     renderPendingSubjects();
   }
   closeSubjectModal();
@@ -283,4 +438,117 @@ function removePendingSubject(index) {
   pendingSubjects.splice(index, 1);
   renderPendingSubjects();
 }
-loadStudents();
+
+// =====================================================
+// DARK MODE
+// =====================================================
+
+function toggleDarkMode() {
+  document.body.classList.toggle("dark");
+  const btn = document.querySelector(".toggle-btn");
+  if (document.body.classList.contains("dark")) {
+    btn.textContent = "☀️";
+    localStorage.setItem("darkMode", "enabled");
+  } else {
+    btn.textContent = "🌙";
+    localStorage.setItem("darkMode", "disabled");
+  }
+}
+
+// =====================================================
+// CLASSES & SECTIONS
+// =====================================================
+
+async function loadClasses() {
+  const res     = await fetch(CLASS_API);
+  const classes = await res.json();
+  const container = document.getElementById('class-list');
+
+  if (!classes.length) {
+    container.innerHTML = '<p class="no-classes-msg">No classes yet. Add your first class above.</p>';
+    return;
+  }
+
+  container.innerHTML = classes.map(c => `
+    <div class="class-card">
+      <div class="class-card-header">
+        <h3>🏫 ${c.name}</h3>
+        <button class="delete-class-btn" onclick="deleteClassAPI(${c.id})">Delete</button>
+      </div>
+
+      <div class="sections-container" id="sections-${c.id}">
+        ${(c.sections && c.sections.length)
+          ? c.sections.map(s => `
+              <span class="section-chip">
+                Section ${s.name}
+                <button onclick="deleteSectionAPI(${s.id})">✕</button>
+              </span>`)
+            .join('')
+          : '<span style="color:#aaa;font-size:12px;">No sections yet</span>'
+        }
+      </div>
+
+      <div class="add-section-row">
+        <input id="sec-inp-${c.id}" placeholder="Section name (e.g. A, B)"
+          onkeydown="if(event.key==='Enter') addSectionAPI(${c.id})">
+        <button onclick="addSectionAPI(${c.id})">+ Add Section</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function addClassAPI() {
+  const name = document.getElementById('new-class-name').value.trim();
+  if (!name) return;
+
+  const res = await fetch(CLASS_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
+  });
+
+  if (res.status === 409 || !res.ok) {
+    alert('A class with this name already exists!');
+    return;
+  }
+
+  document.getElementById('new-class-name').value = '';
+  loadClasses();
+}
+
+async function deleteClassAPI(id) {
+  if (!confirm('Delete this class and all its sections?')) return;
+  await fetch(`${CLASS_API}/${id}`, { method: 'DELETE' });
+  loadClasses();
+}
+
+async function addSectionAPI(classId) {
+  const input = document.getElementById(`sec-inp-${classId}`);
+  const name  = input.value.trim();
+  if (!name) return;
+
+  await fetch(`${CLASS_API}/${classId}/sections`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
+  });
+
+  input.value = '';
+  loadClasses();
+}
+
+async function deleteSectionAPI(sectionId) {
+  await fetch(`${CLASS_API}/sections/${sectionId}`, { method: 'DELETE' });
+  loadClasses();
+}
+
+// =====================================================
+// BOOT — check if teacher already logged in
+// =====================================================
+
+const savedTeacher = localStorage.getItem('teacher');
+if (savedTeacher) {
+  enterApp(JSON.parse(savedTeacher));
+} else {
+  document.getElementById('auth-screen').style.display = 'flex';
+}

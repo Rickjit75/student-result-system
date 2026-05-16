@@ -19,6 +19,9 @@ public class StudentService {
     private SubjectMarkRepository subjectMarkRepo;
 
     public Student addStudent(Student s) {
+        if (repo.existsByEmail(s.getEmail())) {
+            throw new RuntimeException("DUPLICATE_EMAIL");
+        }
         if (s.getExtraSubjects() != null) {
             for (SubjectMark sub : s.getExtraSubjects()) {
                 sub.setStudent(s);
@@ -57,5 +60,9 @@ public class StudentService {
 
     public void deleteExtraSubject(Long subjectId) {
         subjectMarkRepo.deleteById(subjectId);
+    }
+
+    public boolean emailExists(String email) {
+        return repo.existsByEmail(email);
     }
 }
