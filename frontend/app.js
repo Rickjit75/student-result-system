@@ -1,11 +1,12 @@
 // ===== API ENDPOINTS =====
-const API       = "https://student-result-system-production-0eef.up.railway.app/api/students";
-const AUTH_API  = "https://student-result-system-production-0eef.up.railway.app/api/auth";
-const CLASS_API = "https://student-result-system-production-0eef.up.railway.app/api/classes";
+const API      = "https://student-result-system-production-0eef.up.railway.app/api/students";
+const AUTH_API = "https://student-result-system-production-0eef.up.railway.app/api/auth";
 
 // ===== STATE =====
 let editingSubjects = [];
 let pendingSubjects = [];
+let activeClass   = localStorage.getItem('activeClass')   || '';
+let activeSection = localStorage.getItem('activeSection') || '';
 
 // =====================================================
 // AUTH
@@ -23,12 +24,10 @@ function switchAuthTab(tab) {
 async function doLogin() {
   const email    = document.getElementById('login-email').value.trim();
   const password = document.getElementById('login-pass').value;
-
   if (!email || !password) {
     document.getElementById('auth-error').textContent = 'Please fill in all fields.';
     return;
   }
-
   try {
     const res  = await fetch(`${AUTH_API}/login`, {
       method: 'POST',
@@ -43,7 +42,7 @@ async function doLogin() {
       document.getElementById('auth-error').textContent = data.message;
     }
   } catch (e) {
-    document.getElementById('auth-error').textContent = 'Could not connect to server. Please try again.';
+    document.getElementById('auth-error').textContent = 'Could not connect to server.';
   }
 }
 
@@ -52,7 +51,6 @@ async function doRegister() {
   const email    = document.getElementById('reg-email').value.trim();
   const password = document.getElementById('reg-pass').value;
   const school   = document.getElementById('reg-school').value.trim();
-
   if (!name || !email || !password || !school) {
     document.getElementById('auth-error').textContent = 'Please fill in all fields.';
     return;
@@ -61,7 +59,6 @@ async function doRegister() {
     document.getElementById('auth-error').textContent = 'Password must be at least 6 characters.';
     return;
   }
-
   try {
     const res  = await fetch(`${AUTH_API}/register`, {
       method: 'POST',
@@ -76,7 +73,7 @@ async function doRegister() {
       document.getElementById('auth-error').textContent = data.message;
     }
   } catch (e) {
-    document.getElementById('auth-error').textContent = 'Could not connect to server. Please try again.';
+    document.getElementById('auth-error').textContent = 'Could not connect to server.';
   }
 }
 
@@ -91,7 +88,13 @@ function enterApp(teacher) {
     if (btn) btn.textContent = '☀️';
   }
 
-  populateClassDropdown();
+  // Restore saved class & section
+  if (activeClass) {
+    document.getElementById('selected-class').value   = activeClass;
+    document.getElementById('selected-section').value = activeSection;
+    updateActiveBanner();
+  }
+
   loadStudents();
 }
 
@@ -106,166 +109,36 @@ function doLogout() {
 }
 
 // =====================================================
-// CLASS & SECTION SELECTOR
+// CLASS & SECTION — confirm selection
 // =====================================================
 
-async function populateClassDropdown() {
-  try {
-    const res     = await fetch(CLASS_API);
-    const classes = await res.json();
-    const sel     = document.getElementById('selected-class');
-    const savedId = localStorage.getItem('selectedClassId');
+function confirmClassSection() {
+  const cls = document.getElementById('selected-class').value;
+  const sec = document.getElementById('selected-section').value;
 
-    sel.innerHTML = '<option value="">— Select Class —</option>' +
-      classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-
-    if (savedId) {
-      sel.value = savedId;
-      await onClassChange(true);
-    }
-
-    renderInlineClassList(classes);
-  } catch (e) {
-    console.error('Could not load classes:', e);
-  }
-}
-
-async function onClassChange(restoreSection) {
-  const classId = document.getElementById('selected-class').value;
-  const secSel  = document.getElementById('selected-section');
-
-  secSel.innerHTML = '<option value="">— Select Section —</option>';
-  document.getElementById('active-class-banner').style.display = 'none';
-
-  if (!classId) {
-    localStorage.removeItem('selectedClassId');
-    localStorage.removeItem('selectedSection');
+  if (!cls || !sec) {
+    alert('Please select both a Class and a Section.');
     return;
   }
 
-  localStorage.setItem('selectedClassId', classId);
+  activeClass   = cls;
+  activeSection = sec;
+  localStorage.setItem('activeClass',   cls);
+  localStorage.setItem('activeSection', sec);
 
-  try {
-    const res      = await fetch(`${CLASS_API}/${classId}/sections`);
-    const sections = await res.json();
-    sections.forEach(s => {
-      secSel.innerHTML += `<option value="${s.name}">${s.name}</option>`;
-    });
-
-    const savedSection = localStorage.getItem('selectedSection');
-    if (restoreSection && savedSection) {
-      secSel.value = savedSection;
-    }
-  } catch (e) {
-    console.error('Could not load sections:', e);
-  }
-
-  updateActiveBanner();
-}
-
-function onSectionChange() {
-  const section = document.getElementById('selected-section').value;
-  if (section) localStorage.setItem('selectedSection', section);
-  else localStorage.removeItem('selectedSection');
   updateActiveBanner();
 }
 
 function updateActiveBanner() {
-  const classSelect   = document.getElementById('selected-class');
-  const sectionSelect = document.getElementById('selected-section');
-  const banner        = document.getElementById('active-class-banner');
-  const label         = document.getElementById('active-class-label');
+  const banner = document.getElementById('active-class-banner');
+  const label  = document.getElementById('active-class-label');
 
-  const className = classSelect.options[classSelect.selectedIndex]?.text;
-  const section   = sectionSelect.value;
-
-  if (classSelect.value && section) {
-    label.textContent = `${className} — Section ${section}`;
+  if (activeClass && activeSection) {
+    label.textContent    = `Class ${activeClass} — Section ${activeSection}`;
     banner.style.display = 'block';
   } else {
     banner.style.display = 'none';
   }
-}
-
-// =====================================================
-// INLINE CLASS MANAGEMENT
-// =====================================================
-
-function renderInlineClassList(classes) {
-  const container = document.getElementById('classes-inline-list');
-  if (!classes.length) {
-    container.innerHTML = '<p class="no-classes-msg">No classes yet. Add one above.</p>';
-    return;
-  }
-
-  container.innerHTML = classes.map(c => `
-    <div class="inline-class-item">
-      <div class="inline-class-header">
-        <span class="inline-class-name">🏫 ${c.name}</span>
-        <button class="delete-class-btn" onclick="deleteClassAPI(${c.id})">Delete</button>
-      </div>
-      <div class="inline-sections">
-        ${(c.sections && c.sections.length)
-          ? c.sections.map(s => `
-              <span class="section-chip">
-                Section ${s.name}
-                <button onclick="deleteSectionAPI(${s.id})">✕</button>
-              </span>`).join('')
-          : '<span style="color:#aaa;font-size:12px;">No sections yet</span>'
-        }
-      </div>
-      <div class="add-section-inline">
-        <input id="sec-inp-${c.id}" placeholder="Add section (e.g. A)"
-          onkeydown="if(event.key==='Enter') addSectionAPI(${c.id})">
-        <button onclick="addSectionAPI(${c.id})">+ Section</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-async function addClassAPI() {
-  const name = document.getElementById('new-class-name').value.trim();
-  if (!name) return;
-
-  const res = await fetch(CLASS_API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name })
-  });
-
-  if (res.status === 409 || !res.ok) {
-    alert('A class with this name already exists!');
-    return;
-  }
-
-  document.getElementById('new-class-name').value = '';
-  await populateClassDropdown();
-}
-
-async function deleteClassAPI(id) {
-  if (!confirm('Delete this class and all its sections?')) return;
-  await fetch(`${CLASS_API}/${id}`, { method: 'DELETE' });
-  await populateClassDropdown();
-}
-
-async function addSectionAPI(classId) {
-  const input = document.getElementById(`sec-inp-${classId}`);
-  const name  = input.value.trim();
-  if (!name) return;
-
-  await fetch(`${CLASS_API}/${classId}/sections`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name })
-  });
-
-  input.value = '';
-  await populateClassDropdown();
-}
-
-async function deleteSectionAPI(sectionId) {
-  await fetch(`${CLASS_API}/sections/${sectionId}`, { method: 'DELETE' });
-  await populateClassDropdown();
 }
 
 // =====================================================
@@ -290,10 +163,12 @@ async function loadStudents() {
   thead.innerHTML = `
     <th>Name</th>
     <th>Email</th>
+    <th>Class</th>
+    <th>Section</th>
     <th>Math</th>
     <th>Science</th>
     <th>English</th>
-    ${extraSubjectList.map(name => `<th>${name}</th>`).join("")}
+    ${extraSubjectList.map(n => `<th>${n}</th>`).join("")}
     <th>Average</th>
     <th>Grade</th>
     <th>Actions</th>
@@ -328,10 +203,16 @@ async function loadStudents() {
       return `<td>${found ? found.marks : "<span style='color:#aaa;'>-</span>"}</td>`;
     }).join("");
 
+    // Show class & section from student record, fallback to stored
+    const studentClass   = s.studentClass   || s.classLabel   || '—';
+    const studentSection = s.studentSection || s.sectionLabel || '—';
+
     tbody.innerHTML += `
       <tr>
         <td>${s.name}</td>
         <td>${s.email}</td>
+        <td><span class="class-badge">${studentClass}</span></td>
+        <td><span class="section-badge">${studentSection}</span></td>
         <td>${s.mathMarks}</td>
         <td>${s.scienceMarks}</td>
         <td>${s.englishMarks}</td>
@@ -363,16 +244,14 @@ async function addStudent() {
   const mathMarks    = parseInt(document.getElementById("math").value);
   const scienceMarks = parseInt(document.getElementById("science").value);
   const englishMarks = parseInt(document.getElementById("english").value);
-  const classId      = document.getElementById("selected-class").value;
-  const section      = document.getElementById("selected-section").value;
 
   if (!name || !email || isNaN(mathMarks) || isNaN(scienceMarks) || isNaN(englishMarks)) {
     alert("Please fill all student fields correctly!");
     return;
   }
 
-  if (!classId || !section) {
-    alert("Please select a Class and Section at the top before adding a student.");
+  if (!activeClass || !activeSection) {
+    alert("Please select a Class and Section first and click +ADD.");
     return;
   }
 
@@ -382,9 +261,13 @@ async function addStudent() {
   }
 
   const student = {
-    name, email, mathMarks, scienceMarks, englishMarks,
-    classId: parseInt(classId),
-    section,
+    name,
+    email,
+    mathMarks,
+    scienceMarks,
+    englishMarks,
+    studentClass:   `Class ${activeClass}`,
+    studentSection: activeSection,
     extraSubjects: pendingSubjects.map(s => ({
       subjectName: s.subjectName,
       marks: s.marks
@@ -402,7 +285,7 @@ async function addStudent() {
     return;
   }
 
-  // Reset only student fields — class & section stay selected
+  // Reset only student fields — class & section stay
   pendingSubjects = [];
   document.getElementById("extraSubjectsContainer").innerHTML = "";
   document.getElementById("name").value    = "";
@@ -424,9 +307,7 @@ let dupCheckTimeout = null;
 async function checkDuplicateEmail() {
   const email   = document.getElementById('email').value.trim();
   const warning = document.getElementById('dup-warning');
-
   if (!email) { warning.style.display = 'none'; return; }
-
   clearTimeout(dupCheckTimeout);
   dupCheckTimeout = setTimeout(async () => {
     try {
@@ -451,7 +332,6 @@ function openEditModal(student) {
   document.getElementById("editMath").value    = student.mathMarks;
   document.getElementById("editScience").value = student.scienceMarks;
   document.getElementById("editEnglish").value = student.englishMarks;
-
   editingSubjects = student.extraSubjects
     ? student.extraSubjects.map(s => ({ id: s.id, subjectName: s.subjectName, marks: s.marks }))
     : [];
@@ -489,7 +369,7 @@ function closeEditModal() {
 }
 
 async function updateStudent() {
-  const id      = document.getElementById("editId").value;
+  const id = document.getElementById("editId").value;
   const student = {
     name:          document.getElementById("editName").value,
     email:         document.getElementById("editEmail").value,
@@ -497,18 +377,14 @@ async function updateStudent() {
     scienceMarks:  parseInt(document.getElementById("editScience").value),
     englishMarks:  parseInt(document.getElementById("editEnglish").value),
     extraSubjects: editingSubjects.map(s => ({
-      id:          s.id || null,
-      subjectName: s.subjectName,
-      marks:       s.marks
+      id: s.id || null, subjectName: s.subjectName, marks: s.marks
     }))
   };
-
   await fetch(`${API}/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(student)
   });
-
   closeEditModal();
   loadStudents();
 }
@@ -542,11 +418,7 @@ function closeSubjectModal() {
 function confirmAddSubject() {
   const name  = document.getElementById("subjectName").value.trim();
   const marks = parseInt(document.getElementById("subjectMarks").value);
-  if (!name || isNaN(marks)) {
-    alert("Please enter subject name and marks!");
-    return;
-  }
-
+  if (!name || isNaN(marks)) { alert("Please enter subject name and marks!"); return; }
   const mode = document.getElementById("subjectModal").getAttribute("data-mode");
   if (mode === "edit") {
     editingSubjects.push({ subjectName: name, marks });
