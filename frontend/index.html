@@ -50,7 +50,12 @@
     <h1>Student Result Management System</h1>
     <div style="flex:1; display:flex; justify-content:flex-end; align-items:center; gap:8px;">
       <span id="topbar-teacher-name"></span>
-      <button class="toggle-btn small" onclick="doLogout()" style="background:#e74c3c;">Logout</button>
+      <button class="logout-icon-btn" onclick="doLogout()" title="Logout">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="white">
+    <path d="M16 13v-2H7V8l-5 4 5 4v-3z"/>
+    <path d="M20 3h-9a2 2 0 00-2 2v4h2V5h9v14h-9v-4H9v4a2 2 0 002 2h9a2 2 0 002-2V5a2 2 0 00-2-2z"/>
+  </svg>
+</button>
       <button class="toggle-btn small" onclick="toggleDarkMode()">🌙</button>
     </div>
   </div>
