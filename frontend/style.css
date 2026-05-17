@@ -589,3 +589,21 @@ body.dark .section-chip {
 
 body.dark .section-chip button { color: #f1948a !important; }
 body.dark .no-classes-msg { color: #666; }
+.logout-icon-btn {
+  background: #e74c3c;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  transition: background 0.2s;
+}
+
+.logout-icon-btn:hover {
+  background: #c0392b;
+}
