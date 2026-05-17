@@ -15,23 +15,17 @@
       <div>Student Result System</div>
       <small>Teacher Portal</small>
     </div>
-
     <div class="auth-tabs">
       <button class="auth-tab active" onclick="switchAuthTab('login')">Login</button>
       <button class="auth-tab" onclick="switchAuthTab('register')">Register</button>
     </div>
-
     <div id="auth-error" class="auth-error"></div>
-
-    <!-- Login Form -->
     <div id="login-form">
       <input id="login-email" placeholder="Email" type="email">
       <input id="login-pass" placeholder="Password" type="password"
         onkeydown="if(event.key==='Enter') doLogin()">
       <button onclick="doLogin()">Login →</button>
     </div>
-
-    <!-- Register Form -->
     <div id="register-form" style="display:none;">
       <input id="reg-name" placeholder="Full Name">
       <input id="reg-email" placeholder="Email" type="email">
@@ -112,52 +106,55 @@
     </div>
   </div>
 
-  <!-- Step 1: Class & Section Selector -->
+  <!-- Class & Section Selector -->
   <div class="form-box" id="class-section-selector">
-    <h2>📌 Set Class &amp; Section</h2>
-    <p class="selector-hint">Set once — all students added below will belong to this class and section.</p>
+    <h2>Set Class &amp; Section</h2>
+    <p class="selector-hint">Select once — all students added will belong to this class and section.</p>
 
-    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:8px;">
-      <div style="flex:1; min-width:180px;">
+    <div class="class-section-row">
+      <div class="cs-field">
         <label class="field-label">Class</label>
-        <select id="selected-class" onchange="onClassChange(false)">
-          <option value="">— Select Class —</option>
+        <select id="selected-class">
+          <option value="">— Select —</option>
+          <option value="1">Class 1</option>
+          <option value="2">Class 2</option>
+          <option value="3">Class 3</option>
+          <option value="4">Class 4</option>
+          <option value="5">Class 5</option>
+          <option value="6">Class 6</option>
+          <option value="7">Class 7</option>
+          <option value="8">Class 8</option>
+          <option value="9">Class 9</option>
+          <option value="10">Class 10</option>
         </select>
       </div>
-      <div style="flex:1; min-width:180px;">
+      <div class="cs-field">
         <label class="field-label">Section</label>
-        <select id="selected-section" onchange="onSectionChange()">
-          <option value="">— Select Section —</option>
+        <select id="selected-section">
+          <option value="">— Select —</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+          <option value="D">D</option>
+          <option value="E">E</option>
         </select>
+      </div>
+      <div class="cs-add">
+        <button class="add-cs-btn" onclick="confirmClassSection()">+ADD</button>
       </div>
     </div>
 
     <div id="active-class-banner" class="active-class-banner" style="display:none;">
       ✅ Active: <span id="active-class-label"></span>
     </div>
-
-    <!-- Manage Classes & Sections inline -->
-    <div style="margin-top:16px; border-top:1px solid #eee; padding-top:14px;">
-      <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
-        <div style="flex:1; min-width:160px;">
-          <label class="field-label">Add New Class</label>
-          <input id="new-class-name" placeholder="e.g. Class 10" style="margin:0;">
-        </div>
-        <button onclick="addClassAPI()" style="width:auto; padding:10px 18px; margin:0;">+ Add Class</button>
-      </div>
-
-      <div id="classes-inline-list" style="margin-top:12px;"></div>
-    </div>
   </div>
 
-  <!-- Step 2: Add Student -->
+  <!-- Add Student Form -->
   <div class="form-box">
     <h2>Add Student</h2>
-
     <div id="dup-warning" class="dup-warning" style="display:none;">
       ⚠️ A student with this email already exists!
     </div>
-
     <input id="name" placeholder="Name">
     <input id="email" placeholder="Email" type="email" oninput="checkDuplicateEmail()">
     <input id="math" placeholder="Math Marks" type="number">
@@ -175,6 +172,8 @@
       <tr>
         <th>Name</th>
         <th>Email</th>
+        <th>Class</th>
+        <th>Section</th>
         <th>Math</th>
         <th>Science</th>
         <th>English</th>
