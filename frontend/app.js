@@ -36,7 +36,6 @@ async function doLogin() {
       body: JSON.stringify({ email, password })
     });
     const data = await res.json();
-
     if (data.success) {
       localStorage.setItem('teacher', JSON.stringify(data.teacher));
       enterApp(data.teacher);
@@ -70,7 +69,6 @@ async function doRegister() {
       body: JSON.stringify({ name, email, password, school })
     });
     const data = await res.json();
-
     if (data.success) {
       localStorage.setItem('teacher', JSON.stringify(data.teacher));
       enterApp(data.teacher);
@@ -87,13 +85,13 @@ function enterApp(teacher) {
   document.getElementById('main-app').style.display    = 'block';
   document.getElementById('topbar-teacher-name').textContent = '👤 ' + teacher.name;
 
-  // Apply saved dark mode
   if (localStorage.getItem('darkMode') === 'enabled') {
     document.body.classList.add('dark');
     const btn = document.querySelector('.toggle-btn');
     if (btn) btn.textContent = '☀️';
   }
 
+  populateClassDropdown();
   loadStudents();
 }
 
@@ -101,7 +99,6 @@ function doLogout() {
   localStorage.removeItem('teacher');
   document.getElementById('main-app').style.display    = 'none';
   document.getElementById('auth-screen').style.display = 'flex';
-  // Reset auth form
   document.getElementById('login-email').value = '';
   document.getElementById('login-pass').value  = '';
   document.getElementById('auth-error').textContent = '';
@@ -109,23 +106,166 @@ function doLogout() {
 }
 
 // =====================================================
-// NAV TABS
+// CLASS & SECTION SELECTOR
 // =====================================================
 
-function showSection(id) {
-  document.getElementById('dashboard-students').style.display =
-    id === 'dashboard-students' ? 'block' : 'none';
-  document.getElementById('classes-section').style.display =
-    id === 'classes-section' ? 'block' : 'none';
+async function populateClassDropdown() {
+  try {
+    const res     = await fetch(CLASS_API);
+    const classes = await res.json();
+    const sel     = document.getElementById('selected-class');
+    const savedId = localStorage.getItem('selectedClassId');
 
-  document.querySelectorAll('.nav-tab').forEach((btn, i) => {
-    btn.classList.toggle('active',
-      (i === 0 && id === 'dashboard-students') ||
-      (i === 1 && id === 'classes-section')
-    );
+    sel.innerHTML = '<option value="">— Select Class —</option>' +
+      classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+
+    if (savedId) {
+      sel.value = savedId;
+      await onClassChange(true);
+    }
+
+    renderInlineClassList(classes);
+  } catch (e) {
+    console.error('Could not load classes:', e);
+  }
+}
+
+async function onClassChange(restoreSection) {
+  const classId = document.getElementById('selected-class').value;
+  const secSel  = document.getElementById('selected-section');
+
+  secSel.innerHTML = '<option value="">— Select Section —</option>';
+  document.getElementById('active-class-banner').style.display = 'none';
+
+  if (!classId) {
+    localStorage.removeItem('selectedClassId');
+    localStorage.removeItem('selectedSection');
+    return;
+  }
+
+  localStorage.setItem('selectedClassId', classId);
+
+  try {
+    const res      = await fetch(`${CLASS_API}/${classId}/sections`);
+    const sections = await res.json();
+    sections.forEach(s => {
+      secSel.innerHTML += `<option value="${s.name}">${s.name}</option>`;
+    });
+
+    const savedSection = localStorage.getItem('selectedSection');
+    if (restoreSection && savedSection) {
+      secSel.value = savedSection;
+    }
+  } catch (e) {
+    console.error('Could not load sections:', e);
+  }
+
+  updateActiveBanner();
+}
+
+function onSectionChange() {
+  const section = document.getElementById('selected-section').value;
+  if (section) localStorage.setItem('selectedSection', section);
+  else localStorage.removeItem('selectedSection');
+  updateActiveBanner();
+}
+
+function updateActiveBanner() {
+  const classSelect   = document.getElementById('selected-class');
+  const sectionSelect = document.getElementById('selected-section');
+  const banner        = document.getElementById('active-class-banner');
+  const label         = document.getElementById('active-class-label');
+
+  const className = classSelect.options[classSelect.selectedIndex]?.text;
+  const section   = sectionSelect.value;
+
+  if (classSelect.value && section) {
+    label.textContent = `${className} — Section ${section}`;
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+// =====================================================
+// INLINE CLASS MANAGEMENT
+// =====================================================
+
+function renderInlineClassList(classes) {
+  const container = document.getElementById('classes-inline-list');
+  if (!classes.length) {
+    container.innerHTML = '<p class="no-classes-msg">No classes yet. Add one above.</p>';
+    return;
+  }
+
+  container.innerHTML = classes.map(c => `
+    <div class="inline-class-item">
+      <div class="inline-class-header">
+        <span class="inline-class-name">🏫 ${c.name}</span>
+        <button class="delete-class-btn" onclick="deleteClassAPI(${c.id})">Delete</button>
+      </div>
+      <div class="inline-sections">
+        ${(c.sections && c.sections.length)
+          ? c.sections.map(s => `
+              <span class="section-chip">
+                Section ${s.name}
+                <button onclick="deleteSectionAPI(${s.id})">✕</button>
+              </span>`).join('')
+          : '<span style="color:#aaa;font-size:12px;">No sections yet</span>'
+        }
+      </div>
+      <div class="add-section-inline">
+        <input id="sec-inp-${c.id}" placeholder="Add section (e.g. A)"
+          onkeydown="if(event.key==='Enter') addSectionAPI(${c.id})">
+        <button onclick="addSectionAPI(${c.id})">+ Section</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function addClassAPI() {
+  const name = document.getElementById('new-class-name').value.trim();
+  if (!name) return;
+
+  const res = await fetch(CLASS_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
   });
 
-  if (id === 'classes-section') loadClasses();
+  if (res.status === 409 || !res.ok) {
+    alert('A class with this name already exists!');
+    return;
+  }
+
+  document.getElementById('new-class-name').value = '';
+  await populateClassDropdown();
+}
+
+async function deleteClassAPI(id) {
+  if (!confirm('Delete this class and all its sections?')) return;
+  await fetch(`${CLASS_API}/${id}`, { method: 'DELETE' });
+  await populateClassDropdown();
+}
+
+async function addSectionAPI(classId) {
+  const input = document.getElementById(`sec-inp-${classId}`);
+  const name  = input.value.trim();
+  if (!name) return;
+
+  await fetch(`${CLASS_API}/${classId}/sections`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
+  });
+
+  input.value = '';
+  await populateClassDropdown();
+}
+
+async function deleteSectionAPI(sectionId) {
+  await fetch(`${CLASS_API}/sections/${sectionId}`, { method: 'DELETE' });
+  await populateClassDropdown();
 }
 
 // =====================================================
@@ -139,7 +279,6 @@ async function loadStudents() {
   const thead    = document.querySelector("thead tr");
   tbody.innerHTML = "";
 
-  // Collect all unique extra subject names
   const allExtraSubjects = new Set();
   students.forEach(s => {
     if (s.extraSubjects) {
@@ -148,7 +287,6 @@ async function loadStudents() {
   });
   const extraSubjectList = [...allExtraSubjects];
 
-  // Rebuild table headers dynamically
   thead.innerHTML = `
     <th>Name</th>
     <th>Email</th>
@@ -161,9 +299,7 @@ async function loadStudents() {
     <th>Actions</th>
   `;
 
-  let totalAvg = 0;
-  let passCount = 0;
-  let failCount = 0;
+  let totalAvg = 0, passCount = 0, failCount = 0;
 
   students.forEach(s => {
     let total = s.mathMarks + s.scienceMarks + s.englishMarks;
@@ -209,8 +345,9 @@ async function loadStudents() {
       </tr>`;
   });
 
-  document.getElementById("totalStudents").textContent  = students.length;
-  document.getElementById("classAverage").textContent   =
+  document.getElementById("totalStudents").textContent =
+    students.length;
+  document.getElementById("classAverage").textContent  =
     students.length > 0 ? (totalAvg / students.length).toFixed(1) : 0;
   document.getElementById("passCount").textContent = passCount;
   document.getElementById("failCount").textContent = failCount;
@@ -226,24 +363,28 @@ async function addStudent() {
   const mathMarks    = parseInt(document.getElementById("math").value);
   const scienceMarks = parseInt(document.getElementById("science").value);
   const englishMarks = parseInt(document.getElementById("english").value);
+  const classId      = document.getElementById("selected-class").value;
+  const section      = document.getElementById("selected-section").value;
 
   if (!name || !email || isNaN(mathMarks) || isNaN(scienceMarks) || isNaN(englishMarks)) {
-    alert("Please fill all fields correctly!");
+    alert("Please fill all student fields correctly!");
     return;
   }
 
-  // Block submission if duplicate is flagged
+  if (!classId || !section) {
+    alert("Please select a Class and Section at the top before adding a student.");
+    return;
+  }
+
   if (document.getElementById('dup-warning').style.display === 'block') {
     alert("Please use a different email — this one is already registered.");
     return;
   }
 
   const student = {
-    name,
-    email,
-    mathMarks,
-    scienceMarks,
-    englishMarks,
+    name, email, mathMarks, scienceMarks, englishMarks,
+    classId: parseInt(classId),
+    section,
     extraSubjects: pendingSubjects.map(s => ({
       subjectName: s.subjectName,
       marks: s.marks
@@ -261,7 +402,7 @@ async function addStudent() {
     return;
   }
 
-  // Reset form
+  // Reset only student fields — class & section stay selected
   pendingSubjects = [];
   document.getElementById("extraSubjectsContainer").innerHTML = "";
   document.getElementById("name").value    = "";
@@ -284,12 +425,8 @@ async function checkDuplicateEmail() {
   const email   = document.getElementById('email').value.trim();
   const warning = document.getElementById('dup-warning');
 
-  if (!email) {
-    warning.style.display = 'none';
-    return;
-  }
+  if (!email) { warning.style.display = 'none'; return; }
 
-  // Debounce — wait 400ms after user stops typing
   clearTimeout(dupCheckTimeout);
   dupCheckTimeout = setTimeout(async () => {
     try {
@@ -388,7 +525,7 @@ async function deleteStudent(id) {
 }
 
 // =====================================================
-// EXTRA SUBJECTS (add form)
+// EXTRA SUBJECTS
 // =====================================================
 
 function addSubjectField() {
@@ -411,7 +548,6 @@ function confirmAddSubject() {
   }
 
   const mode = document.getElementById("subjectModal").getAttribute("data-mode");
-
   if (mode === "edit") {
     editingSubjects.push({ subjectName: name, marks });
     renderEditSubjects();
@@ -456,94 +592,7 @@ function toggleDarkMode() {
 }
 
 // =====================================================
-// CLASSES & SECTIONS
-// =====================================================
-
-async function loadClasses() {
-  const res     = await fetch(CLASS_API);
-  const classes = await res.json();
-  const container = document.getElementById('class-list');
-
-  if (!classes.length) {
-    container.innerHTML = '<p class="no-classes-msg">No classes yet. Add your first class above.</p>';
-    return;
-  }
-
-  container.innerHTML = classes.map(c => `
-    <div class="class-card">
-      <div class="class-card-header">
-        <h3>🏫 ${c.name}</h3>
-        <button class="delete-class-btn" onclick="deleteClassAPI(${c.id})">Delete</button>
-      </div>
-
-      <div class="sections-container" id="sections-${c.id}">
-        ${(c.sections && c.sections.length)
-          ? c.sections.map(s => `
-              <span class="section-chip">
-                Section ${s.name}
-                <button onclick="deleteSectionAPI(${s.id})">✕</button>
-              </span>`)
-            .join('')
-          : '<span style="color:#aaa;font-size:12px;">No sections yet</span>'
-        }
-      </div>
-
-      <div class="add-section-row">
-        <input id="sec-inp-${c.id}" placeholder="Section name (e.g. A, B)"
-          onkeydown="if(event.key==='Enter') addSectionAPI(${c.id})">
-        <button onclick="addSectionAPI(${c.id})">+ Add Section</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-async function addClassAPI() {
-  const name = document.getElementById('new-class-name').value.trim();
-  if (!name) return;
-
-  const res = await fetch(CLASS_API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name })
-  });
-
-  if (res.status === 409 || !res.ok) {
-    alert('A class with this name already exists!');
-    return;
-  }
-
-  document.getElementById('new-class-name').value = '';
-  loadClasses();
-}
-
-async function deleteClassAPI(id) {
-  if (!confirm('Delete this class and all its sections?')) return;
-  await fetch(`${CLASS_API}/${id}`, { method: 'DELETE' });
-  loadClasses();
-}
-
-async function addSectionAPI(classId) {
-  const input = document.getElementById(`sec-inp-${classId}`);
-  const name  = input.value.trim();
-  if (!name) return;
-
-  await fetch(`${CLASS_API}/${classId}/sections`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name })
-  });
-
-  input.value = '';
-  loadClasses();
-}
-
-async function deleteSectionAPI(sectionId) {
-  await fetch(`${CLASS_API}/sections/${sectionId}`, { method: 'DELETE' });
-  loadClasses();
-}
-
-// =====================================================
-// BOOT — check if teacher already logged in
+// BOOT
 // =====================================================
 
 const savedTeacher = localStorage.getItem('teacher');
