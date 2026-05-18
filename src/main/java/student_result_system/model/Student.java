@@ -20,6 +20,11 @@ public class Student {
     private int mathMarks;
     private int scienceMarks;
     private int englishMarks;
+    @Column(name = "student_class")
+    private String studentClass;
+
+    @Column(name = "student_section")
+    private String studentSection;
 
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<SubjectMark> extraSubjects = new ArrayList<>();
