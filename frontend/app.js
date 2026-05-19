@@ -203,9 +203,8 @@ async function loadStudents() {
       return `<td>${found ? found.marks : "<span style='color:#aaa;'>-</span>"}</td>`;
     }).join("");
 
-    // Show class & section from student record, fallback to stored
-    const studentClass   = s.studentClass   || s.classLabel   || '—';
-    const studentSection = s.studentSection || s.sectionLabel || '—';
+    const studentClass   = s.studentClass   || '—';
+    const studentSection = s.studentSection || '—';
 
     tbody.innerHTML += `
       <tr>
@@ -376,6 +375,8 @@ async function updateStudent() {
     mathMarks:     parseInt(document.getElementById("editMath").value),
     scienceMarks:  parseInt(document.getElementById("editScience").value),
     englishMarks:  parseInt(document.getElementById("editEnglish").value),
+    studentClass:   `Class ${activeClass}`,
+    studentSection: activeSection,
     extraSubjects: editingSubjects.map(s => ({
       id: s.id || null, subjectName: s.subjectName, marks: s.marks
     }))
